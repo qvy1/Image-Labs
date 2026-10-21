@@ -37,14 +37,21 @@ Each lab lives in its own folder.
 │   ├── Lab4_Report.pdf
 │   ├── images/
 │   └── output/
-└── Lab5/
-    ├── Lab5_Image_Processing.ipynb
-    ├── Lab5_Report.pdf
+├── Lab5/
+│   ├── Lab5_Image_Processing.ipynb
+│   ├── Lab5_Report.pdf
+│   ├── images/
+│   └── output/
+└── Lab6/
+    ├── Lab6_Image_Processing.ipynb
+    ├── Lab6_Image_Processing.pdf    # the notebook exported as PDF
     ├── images/
     └── output/
 ```
 
-From Lab 3 onward each lab folder also contains a PDF report, as required by the lab manuals.
+From Lab 3 onward each lab folder also contains a PDF, as required by the lab manuals. For
+Labs 3–5 this is a written report; for Lab 6 the manual asks instead for the notebook itself
+exported as a PDF.
 
 ---
 
@@ -57,6 +64,7 @@ From Lab 3 onward each lab folder also contains a PDF report, as required by the
 | 3 | Image manipulations using OpenCV | [`Lab3/Lab3_Image_Processing.ipynb`](Lab3/Lab3_Image_Processing.ipynb) · [report](Lab3/Lab3_Report.pdf) | Completed |
 | 4 | Intensity transformations and filtering | [`Lab4/Lab4_Image_Processing.ipynb`](Lab4/Lab4_Image_Processing.ipynb) · [report](Lab4/Lab4_Report.pdf) | Completed |
 | 5 | Spatial filtering — smoothing and sharpening | [`Lab5/Lab5_Image_Processing.ipynb`](Lab5/Lab5_Image_Processing.ipynb) · [report](Lab5/Lab5_Report.pdf) | Completed |
+| 6 | Filtering in the frequency domain | [`Lab6/Lab6_Image_Processing.ipynb`](Lab6/Lab6_Image_Processing.ipynb) · [PDF](Lab6/Lab6_Image_Processing.pdf) | Completed |
 
 ---
 
@@ -210,6 +218,47 @@ apply geometric transformations to images.
   preserved because the weights sum to 1.
 - The Laplacian amplifies noise by about eight times; blurring first (Laplacian of Gaussian)
   keeps it near the input level.
+
+---
+
+## Lab 6 — Filtering in the Frequency Domain
+
+**Outcome #1:** Write a program that implements fundamental image processing algorithms.
+
+| Part | Description |
+|------|-------------|
+| Part 1 | What the frequency domain is — the 2-D FFT and its spectrum |
+| Part 2 | The Laplacian filter in the frequency domain |
+| Part 3 | The convolution theorem |
+| Task 1 | Apply the Sobel filters in the frequency domain |
+
+### Points addressed in the notebook
+
+- **`fftfreq` is not centred**, despite the comment in the manual — and that is correct. Its
+  output order (`0, +, +, -, -`) matches the layout of `fft2`, so the element-by-element
+  multiplication lines up. `fftshift` is for display only and must never be applied to an array
+  about to be used in a calculation.
+- **`ifftshift` before `fft2`** in `center_embed_kernel` moves the kernel's centre to index
+  `[0,0]`, where the transform expects the origin. Omitting it translates the output by half the
+  image in each direction — verified by comparing against the correct result rolled by
+  `(M//2, N//2)`, which matched exactly. The result still looks like a plausible edge map, which
+  is what makes this error dangerous.
+- **The frequency product is convolution, not correlation.** Lab 5 noted that `cv2.filter2D`
+  performs correlation; for the symmetric kernels there it made no difference, but the Sobel
+  kernels are antisymmetric. Measured: `1.5e-15` against the spatial convolution and `6.6`
+  against the correlation of the same image.
+- The FFT treats the image as periodic, so frequency-domain filtering wraps at the edges. The
+  spatial comparisons therefore use `mode='wrap'`; the disagreement with other border modes is
+  confined to the border pixels.
+- Low and high frequencies were separated with a circular mask and reconstructed independently,
+  giving a blurred image and an edge-only image from the same spectrum. 98.97% of the energy sits
+  in 4.30% of the coefficients.
+- `.real` after the inverse FFT is justified rather than assumed: the largest imaginary component
+  is `7.7e-16`, floating-point rounding rather than signal.
+
+### Images used
+
+No image files are needed — the `cameraman` image comes directly from `skimage.data`.
 
 ---
 
