@@ -42,16 +42,24 @@ Each lab lives in its own folder.
 │   ├── Lab5_Report.pdf
 │   ├── images/
 │   └── output/
-└── Lab6/
-    ├── Lab6_Image_Processing.ipynb
-    ├── Lab6_Image_Processing.pdf    # the notebook exported as PDF
+├── Lab6/
+│   ├── Lab6_Image_Processing.ipynb
+│   ├── Lab6_Image_Processing.pdf    # the notebook exported as PDF
+│   ├── images/
+│   └── output/
+└── Lab 7/
+    ├── Lab7A_Laplacian_Filter.ipynb
+    ├── Lab7A_Laplacian_Filter.pdf
+    ├── Lab7B_Maths_Statistics_Filters.ipynb
+    ├── Lab7B_Maths_Statistics_Filters.pdf
     ├── images/
     └── output/
 ```
 
 From Lab 3 onward each lab folder also contains a PDF, as required by the lab manuals. For
-Labs 3–5 this is a written report; for Lab 6 the manual asks instead for the notebook itself
-exported as a PDF.
+Labs 3–5 this is a written report; from Lab 6 onward the manual asks instead for the notebook
+itself exported as a PDF. Lab 7 was delivered as two separate notebooks, matching the two
+notebooks supplied with the lab.
 
 ---
 
@@ -65,6 +73,8 @@ exported as a PDF.
 | 4 | Intensity transformations and filtering | [`Lab4/Lab4_Image_Processing.ipynb`](Lab4/Lab4_Image_Processing.ipynb) · [report](Lab4/Lab4_Report.pdf) | Completed |
 | 5 | Spatial filtering — smoothing and sharpening | [`Lab5/Lab5_Image_Processing.ipynb`](Lab5/Lab5_Image_Processing.ipynb) · [report](Lab5/Lab5_Report.pdf) | Completed |
 | 6 | Filtering in the frequency domain | [`Lab6/Lab6_Image_Processing.ipynb`](Lab6/Lab6_Image_Processing.ipynb) · [PDF](Lab6/Lab6_Image_Processing.pdf) | Completed |
+| 7 (A) | Laplacian filter | [`Lab7A_Laplacian_Filter.ipynb`](Lab%207/Lab7A_Laplacian_Filter.ipynb) · [PDF](Lab%207/Lab7A_Laplacian_Filter.pdf) | Completed |
+| 7 (B) | Mathematical and statistical filters | [`Lab7B_Maths_Statistics_Filters.ipynb`](Lab%207/Lab7B_Maths_Statistics_Filters.ipynb) · [PDF](Lab%207/Lab7B_Maths_Statistics_Filters.pdf) | Completed |
 
 ---
 
@@ -259,6 +269,74 @@ apply geometric transformations to images.
 ### Images used
 
 No image files are needed — the `cameraman` image comes directly from `skimage.data`.
+
+---
+
+## Lab 7 (A) — Laplacian Filter
+
+| Part | Description |
+|------|-------------|
+| Part 1 | The Laplacian with a manually defined kernel |
+| Part 2 | Why `img + laplacian_abs` overflows — and the fix |
+| Part 3 | `f + abs(lap)` versus `f - lap`: which one actually sharpens |
+| Part 4 | The same result using `cv2.Laplacian` |
+| Part 5 | The 4-neighbour and 8-neighbour kernels compared |
+
+### Points addressed in the notebook
+
+- **`img + laplacian_abs` wraps around.** Both arrays are `uint8`, so 0.31% of the pixels
+  exceed 255 and are taken modulo 256 — a pixel at 194 plus a response of 66 comes out as 4.
+  The dark speckles in the fourth panel are this arithmetic error, not image noise. `cv2.add`
+  saturates and removes them.
+- **The sign follows from the kernel.** With a negative centre the textbook formula is
+  `f - laplacian`, which preserves the mean. The `f + abs(lap)` form in the given code also
+  sharpens but raises the overall brightness by about 4 intensity levels.
+- **`CV_64F`, not `-1`.** The Laplacian is negative wherever a pixel is brighter than its
+  neighbours; a `uint8` output would clip all of those to zero.
+- **The 4- versus 8-neighbour difference, isolated.** Feeding each kernel a single bright pixel
+  settles it in one number: the 4-neighbour returns zero at the diagonal positions, the
+  8-neighbour returns the same value it returns axially. A follow-up step-edge test appears to
+  contradict this, because a diagonal line on a square grid is a staircase of short axial
+  segments — the test measures the discretisation, not the orientation.
+
+---
+
+## Lab 7 (B) — Mathematical and Statistical Filters
+
+| Part | Description |
+|------|-------------|
+| Part 1 | Generating Gaussian, salt & pepper, exponential and uniform noise |
+| Parts 2–5 | Arithmetic, geometric, harmonic and contra-harmonic mean filters |
+| Parts 6–8 | Median, max, min and midpoint filters |
+| Task | Every filter against every noise type, ranked by PSNR |
+
+### Points addressed in the notebook
+
+- **`display()` does not show an image.** `IPython.display.display` on a NumPy array prints the
+  array as text. Every result uses `plt.imshow` instead.
+- **Each filter is applied to the noise it is designed for.** The given code applies all of them
+  to `noise_gauss`, including the ones whose titles say "Salt & Pepper", which hides the point
+  of the lab. Salt-only and pepper-only images were built so the asymmetry could be measured.
+- **The wrong filter is worse than no filter.** On pepper-only noise the harmonic mean scores
+  *below* the noisy input; contra-harmonic with the wrong sign of `Q` does the same. Each
+  one-sided filter has a matched opposite.
+- **The clean reference is generated, not loaded.** PSNR compares a result against the original,
+  and every supplied file is a JPEG whose compression artefacts would be measured as noise.
+- Two identities were verified rather than assumed: contra-harmonic at `Q = 0` reproduces the
+  arithmetic mean and at `Q = -1` the harmonic mean, each to within one intensity level.
+
+### Result of the task
+
+| Noise | Best filter | Gain over the noisy input |
+|---|---|---|
+| Salt only | median | +20.8 dB |
+| Pepper only | median | +18.5 dB |
+| Salt & pepper | median | +20.4 dB |
+| Uniform | median | +5.2 dB |
+| Gaussian | arithmetic mean | +7.8 dB |
+
+The median wins four of the five, losing only on Gaussian noise and there by under a decibel —
+an order-statistic filter turns out to be a reasonable default even where no outliers exist.
 
 ---
 
